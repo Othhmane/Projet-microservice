@@ -17,7 +17,7 @@ const swaggerOptions = {
     },
     servers: [
       {
-        url: 'http://localhost:3000',
+        url: 'http://localhost:5000',
         description: 'Serveur local',
       },
     ],
@@ -40,6 +40,11 @@ const swaggerOptions = {
               type: 'string',
               description: "Email de l'utilisateur",
               example: 'johndoe@example.com',
+            },
+            password: {
+              type: 'string',
+              description: "Mot de passe de l'utilisateur",
+              example: '********',
             },
             dateOfBirth: {
               type: 'string',
@@ -70,6 +75,7 @@ mongoose
 const userSchema = new mongoose.Schema({
     name: { type: String, required: true },
     email: { type: String, required: true, unique: true },
+    password: { type: String, required: true },
     dateOfBirth: { type: Date, required: true },
   });
   
@@ -99,7 +105,7 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
  * /createUser:
  *   post:
  *     summary: Créer un nouvel utilisateur
- *     description: Permet de créer un utilisateur avec un nom, un email et une date de naissance.
+ *     description: Permet de créer un utilisateur avec un nom, un email, un mot de passe et une date de naissance.
  *     tags:
  *       - Utilisateurs
  *     requestBody:
@@ -117,6 +123,10 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
  *                 type: string
  *                 description: Email de l'utilisateur
  *                 example: johndoe@example.com
+ *               password:
+ *                 type: string
+ *                 description: Mot de passe de l'utilisateur
+ *                 example: mySecurePassword123
  *               dateOfBirth:
  *                 type: string
  *                 format: date
@@ -142,21 +152,25 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
  */
 app.post('/createUser', async (req, res) => {
   try {
-    const { name, email, dateOfBirth } = req.body;
+    const { name, email, password, dateOfBirth } = req.body;
 
     // Validation
-    if (!name || !email || !dateOfBirth) {
+    if (!name || !email || !password || !dateOfBirth) {
       return res.status(400).json({ message: 'All fields are required.' });
     }
 
     // Création
-    const newUser = new User({ name, email, dateOfBirth });
+    const newUser = new User({ name, email, password, dateOfBirth });
     await newUser.save();
 
-    res.status(201).json({ message: 'User created successfully', user: newUser });
+    // Remove password from response
+    const userResponse = newUser.toObject();
+    delete userResponse.password;
+
+    res.status(201).json({ message: 'User created successfully', user: userResponse });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: 'Error creating user', error });
+    res.status(500).json({ message: 'Error creating user', error: error.message });
   }
 });
 
